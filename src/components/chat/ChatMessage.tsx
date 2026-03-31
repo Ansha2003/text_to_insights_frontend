@@ -276,10 +276,10 @@ function ErrorContent({ message, onRetry }: { message: Message; onRetry?: () => 
         </span>
 
         {/* Raw response fallback for unknown_format */}
-        {error?.type === 'unknown_format' && error.originalResponse && (
+        {error?.type === 'unknown_format' && Boolean(error.originalResponse) && (
           <details className="chat-message__error-raw">
             <summary>View raw response</summary>
-            <pre>{JSON.stringify(error.originalResponse, null, 2)}</pre>
+            <pre>{JSON.stringify(error.originalResponse as Record<string, unknown>, null, 2)}</pre>
           </details>
         )}
       </div>

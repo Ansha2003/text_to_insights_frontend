@@ -71,7 +71,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
     ),
     // Images - handle base64 data URLs and regular URLs
     img: ({ src, alt }) => (
-      <MarkdownImage src={src || ''} alt={alt || 'Image'} />
+      <MarkdownImage src={typeof src === 'string' ? src : ''} alt={alt || 'Image'} />
     ),
   };
 
