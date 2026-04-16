@@ -194,6 +194,9 @@ export function useChat({
         });
 
         let fullText = '';
+        let previousTurnsText = '';
+        let currentTurnText = '';
+        let newTurnPending = false;
         const parsedData: Partial<ParsedContent> = {};
 
         for await (const event of stream) {
@@ -225,19 +228,30 @@ export function useChat({
               }
             }
 
+            // Mark that the next text event starts a new agent turn
+            newTurnPending = true;
             continue; // Don't show tool events to user
           }
 
           // Parse visible content
           const parsed = parseEventContent(event);
-          
+
           if (parsed) {
             if (parsed.text) {
-              // ADK sends the accumulated text - just use the latest/longest
-              // This handles both streaming increments and duplicate events
-              if (parsed.text.length > fullText.length) {
-                fullText = parsed.text;
-                
+              // When a new turn starts after a tool call, save previous text and reset
+              if (newTurnPending) {
+                previousTurnsText = fullText;
+                currentTurnText = '';
+                newTurnPending = false;
+              }
+
+              // ADK sends cumulative text within a turn — keep the longest
+              if (parsed.text.length > currentTurnText.length) {
+                currentTurnText = parsed.text;
+                fullText = previousTurnsText
+                  ? previousTurnsText + '\n\n' + currentTurnText
+                  : currentTurnText;
+
                 // Update message with streamed content
                 setMessages((prev) =>
                   prev.map((msg) =>
