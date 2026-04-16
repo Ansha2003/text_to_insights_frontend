@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 
+export const maxDuration = 300; // 5 minutes — needed for long-running agent SSE streams
+
 const BACKEND = process.env.BACKEND_URL || 'http://localhost:8000';
 
 export async function POST(request: NextRequest) {
