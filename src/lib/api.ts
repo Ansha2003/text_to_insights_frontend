@@ -21,7 +21,7 @@ interface ApiConfig {
 }
 
 const defaultConfig: ApiConfig = {
-  timeout: 60000, // 60 seconds
+  timeout: 300000, // 5 minutes — agent queries can take 30s+
   retries: 0,
 };
 
