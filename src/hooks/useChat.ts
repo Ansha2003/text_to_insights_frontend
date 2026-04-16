@@ -240,27 +240,27 @@ export function useChat({
             if (parsed.text) {
               // When a new turn starts after a tool call, save previous text and reset
               if (newTurnPending) {
-                previousTurnsText = fullText;
+                if (currentTurnText.length > 0) {
+                  previousTurnsText = fullText;
+                }
                 currentTurnText = '';
                 newTurnPending = false;
               }
 
-              // ADK sends cumulative text within a turn — keep the longest
-              if (parsed.text.length > currentTurnText.length) {
-                currentTurnText = parsed.text;
-                fullText = previousTurnsText
-                  ? previousTurnsText + '\n\n' + currentTurnText
-                  : currentTurnText;
+              // ADK sends incremental text chunks — concatenate them
+              currentTurnText += parsed.text;
+              fullText = previousTurnsText
+                ? previousTurnsText + '\n\n' + currentTurnText
+                : currentTurnText;
 
-                // Update message with streamed content
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === agentMessageId
-                      ? { ...msg, content: fullText }
-                      : msg
-                  )
-                );
-              }
+              // Update message with streamed content
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === agentMessageId
+                    ? { ...msg, content: fullText }
+                    : msg
+                )
+              );
             }
             
             // Collect table/chart/file data
