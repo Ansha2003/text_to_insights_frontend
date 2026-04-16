@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
@@ -73,6 +73,18 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
     img: ({ src, alt }) => (
       <MarkdownImage src={typeof src === 'string' ? src : ''} alt={alt || 'Image'} />
     ),
+    // Unwrap <p> when it only contains a block-level image (figure/div are invalid inside <p>)
+    p: ({ children }) => {
+      const childArray = Array.isArray(children) ? children : [children];
+      const hasOnlyImage = childArray.every(
+        (child) =>
+          child == null ||
+          child === '' ||
+          (typeof child === 'object' && (child as React.ReactElement)?.type === MarkdownImage)
+      );
+      if (hasOnlyImage) return <>{children}</>;
+      return <p>{children}</p>;
+    },
   };
 
   return (
