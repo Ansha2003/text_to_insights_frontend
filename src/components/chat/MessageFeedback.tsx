@@ -8,6 +8,7 @@ interface MessageFeedbackProps {
   messageId: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function MessageFeedback({ messageId }: MessageFeedbackProps) {
   const [feedback, setFeedback] = useState<FeedbackValue>(null);
 

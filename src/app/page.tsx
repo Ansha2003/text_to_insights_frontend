@@ -14,7 +14,6 @@ export default function Home() {
   const {
     messages,
     isLoading,
-    error,
     elapsedTime,
     questions,
     sendMessage,
@@ -43,6 +42,7 @@ export default function Home() {
       questions={questions}
       onQuestionClick={handleQuestionClick}
       onNewChat={handleNewChat}
+      activePath="/"
     >
       {/* Messages Area - includes thinking state in agent message */}
       <ChatMessageList

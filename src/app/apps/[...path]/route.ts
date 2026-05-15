@@ -9,20 +9,27 @@ async function handler(
   const { path } = await params;
   const url = `${BACKEND}/apps/${path.join('/')}`;
 
-  const body = request.method !== 'GET' && request.method !== 'HEAD'
-    ? await request.text()
-    : undefined;
+  const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
+  const body = hasBody ? await request.text() : undefined;
+
+  const headers: Record<string, string> = {};
+  if (hasBody) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   const response = await fetch(url, {
     method: request.method,
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body,
   });
 
-  const data = await response.text();
-  return new NextResponse(data, {
+  const contentType = response.headers.get('Content-Type') || 'application/json';
+
+  // Use arrayBuffer to faithfully proxy both JSON and binary (image) responses
+  const buffer = await response.arrayBuffer();
+  return new NextResponse(buffer, {
     status: response.status,
-    headers: { 'Content-Type': response.headers.get('Content-Type') || 'application/json' },
+    headers: { 'Content-Type': contentType },
   });
 }
 

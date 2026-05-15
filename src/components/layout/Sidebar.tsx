@@ -8,13 +8,20 @@ interface SidebarProps {
   questions: QuestionItem[];
   onQuestionClick?: (question: QuestionItem) => void;
   onNewChat?: () => void;
+  activePath?: string;
 }
+
+const NAV_ITEMS = [
+  { label: 'Chat', href: '/', icon: 'chat' },
+  { label: 'Sales Overview', href: '/dashboard/sales', icon: 'chart' },
+] as const;
 
 export function Sidebar({
   isOpen,
   questions,
   onQuestionClick,
   onNewChat,
+  activePath = '/',
 }: SidebarProps) {
   // Group questions by date
   const groupedQuestions = useMemo(() => {
@@ -69,6 +76,24 @@ export function Sidebar({
           <span>New Chat</span>
         </button>
       </div>
+
+      {/* Navigation Links */}
+      <nav className="sidebar__nav" aria-label="Main navigation">
+        {NAV_ITEMS.map((item) => (
+          <a
+            key={item.href}
+            href={item.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`sidebar__nav-item ${activePath === item.href ? 'sidebar__nav-item--active' : ''}`}
+          >
+            {item.icon === 'chat' ? <ChatIcon /> : <ChartIcon />}
+            <span>{item.label}</span>
+          </a>
+        ))}
+      </nav>
+
+      <div className="sidebar__divider" />
 
       {/* Questions List */}
       <nav className="sidebar__content" aria-label="Previous questions">
@@ -166,6 +191,16 @@ function ChatIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function ChartIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
     </svg>
   );
 }

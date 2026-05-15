@@ -123,6 +123,10 @@ export interface SSEEvent {
       };
     }>;
   };
+  // ADK event actions (artifact saves, state changes, etc.)
+  actions?: {
+    artifactDelta?: Record<string, number>;
+  };
   type?: string;
   data?: unknown;
 }

@@ -3,19 +3,33 @@ import { NextRequest } from 'next/server';
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
-const BACKEND = process.env.BACKEND_URL || 'http://localhost:8000';
+const BACKEND = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
+  const url = `${BACKEND}/run_sse`;
 
-  const backendResponse = await fetch(`${BACKEND}/run_sse`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body,
-  });
+  console.log('[run_sse] Proxying to:', url);
+
+  let backendResponse: Response;
+  try {
+    backendResponse = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+  } catch (err) {
+    console.error('[run_sse] Failed to reach backend:', url, err);
+    return new Response(
+      JSON.stringify({ error: 'Cannot reach backend', backend: url }),
+      { status: 502, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
   if (!backendResponse.ok || !backendResponse.body) {
-    return new Response('Backend error', { status: backendResponse.status });
+    const text = await backendResponse.text().catch(() => '');
+    console.error('[run_sse] Backend returned', backendResponse.status, text.slice(0, 500));
+    return new Response(text || 'Backend error', { status: backendResponse.status });
   }
 
   // Explicitly pipe the backend stream chunk-by-chunk to prevent buffering

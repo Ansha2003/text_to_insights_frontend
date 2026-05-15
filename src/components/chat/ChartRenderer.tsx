@@ -139,8 +139,9 @@ export function ChartRenderer({
           tabIndex={0}
           aria-label={`${alt}. Click to enlarge.`}
         >
-          <img 
-            src={imageSrc} 
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageSrc}
             alt={alt}
             className="chart-renderer__image"
             onError={(e) => {
@@ -249,8 +250,9 @@ function ChartLightbox({
 
         {/* Image */}
         <div className="chart-lightbox__image-container">
-          <img 
-            src={imageSrc} 
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageSrc}
             alt={alt}
             className="chart-lightbox__image"
           />

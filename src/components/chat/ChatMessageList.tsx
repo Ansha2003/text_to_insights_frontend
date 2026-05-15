@@ -132,6 +132,7 @@ function EmptyState({ onSuggestionClick }: { onSuggestionClick?: (s: string) => 
   return (
     <div className="chat-empty-state">
       <div className="chat-empty-state__icon">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/dsg-admin-logo.png" alt="Dream Set Go" style={{ width: '160px', height: 'auto' }} />
       </div>
       <h2 className="chat-empty-state__title" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '4rem', letterSpacing: '0.08em', color: '#002080' }}>Cerebro</h2>

@@ -15,6 +15,39 @@ import {
 } from '@/lib/api';
 import { extractSqlQueries } from '@/lib/responseParser';
 
+/**
+ * ADK / Gemini often repeat the same paragraph verbatim across consecutive
+ * model turns. This function removes exact duplicate paragraphs (split on
+ * blank lines) while preserving everything else — tables, summaries, etc.
+ *
+ * Only exact matches are removed; paragraphs that merely start similarly
+ * but contain different detail are kept.
+ */
+function deduplicateText(text: string): string {
+  if (text.length < 100) return text;
+
+  const paragraphs = text.split(/\n{2,}/);
+  if (paragraphs.length <= 1) return text;
+
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const p of paragraphs) {
+    const trimmed = p.trim();
+    if (!trimmed) continue;
+    if (!seen.has(trimmed)) {
+      seen.add(trimmed);
+      unique.push(trimmed);
+    }
+  }
+
+  // Only rewrite if we actually removed something
+  if (unique.length < paragraphs.filter(p => p.trim()).length) {
+    return unique.join('\n\n');
+  }
+
+  return text;
+}
+
 interface UseChatOptions {
   appName: string;
   userId?: string;
@@ -198,11 +231,22 @@ export function useChat({
         let currentTurnText = '';
         let newTurnPending = false;
         const parsedData: Partial<ParsedContent> = {};
+        const sseArtifactNames: string[] = [];
 
         for await (const event of stream) {
           // Check if aborted
           if (abortControllerRef.current?.signal.aborted) {
             break;
+          }
+
+          // Capture artifact names from ADK artifactDelta actions
+          if (event.actions?.artifactDelta) {
+            for (const name of Object.keys(event.actions.artifactDelta)) {
+              if (!sseArtifactNames.includes(name)) {
+                sseArtifactNames.push(name);
+                console.log('[SSE artifactDelta]', name);
+              }
+            }
           }
 
           // Handle tool events (for optional status display)
@@ -238,7 +282,8 @@ export function useChat({
 
           if (parsed) {
             if (parsed.text) {
-              // When a new turn starts after a tool call, save previous text and reset
+              // When a new turn starts after a tool call, save previous text
+              // and start a fresh segment for the new turn.
               if (newTurnPending) {
                 if (currentTurnText.length > 0) {
                   previousTurnsText = fullText;
@@ -247,8 +292,21 @@ export function useChat({
                 newTurnPending = false;
               }
 
-              // ADK sends incremental text chunks — concatenate them
-              currentTurnText += parsed.text;
+              // ADK sends incremental text chunks — concatenate them.
+              // Guard: ADK sometimes re-delivers the same model output in a
+              // subsequent event (no tool call between them). If a large chunk
+              // starts identically to what we already have, treat it as a
+              // replacement rather than appending, to avoid doubled paragraphs.
+              const isRepeat =
+                parsed.text.length > 80 &&
+                currentTurnText.length > 80 &&
+                parsed.text.slice(0, 80) === currentTurnText.slice(0, 80);
+
+              if (isRepeat) {
+                currentTurnText = parsed.text;
+              } else {
+                currentTurnText += parsed.text;
+              }
               fullText = previousTurnsText
                 ? previousTurnsText + '\n\n' + currentTurnText
                 : currentTurnText;
@@ -270,6 +328,11 @@ export function useChat({
             if (parsed.sql) parsedData.sql = parsed.sql;
           }
         }
+
+        // Strip any duplicated content that slipped through chunked streaming.
+        // If the first 80 chars of the text appear again later, the text was
+        // doubled by ADK — keep only the second (more complete) copy.
+        fullText = deduplicateText(fullText);
 
         // Determine final message type
         let finalType: Message['type'] = 'text';
@@ -303,11 +366,22 @@ export function useChat({
         if (currentSessionId) {
           try {
             console.log('[Fetching artifacts for session]', currentSessionId);
-            const artifactNames = await listArtifacts(appName, userId, currentSessionId);
-            console.log('[Available artifacts]', artifactNames);
+            console.log('[SSE-detected artifacts]', sseArtifactNames);
+            let artifactNames: string[];
+            try {
+              artifactNames = await listArtifacts(appName, userId, currentSessionId);
+            } catch {
+              console.warn('[listArtifacts failed, using SSE-detected names]');
+              artifactNames = [];
+            }
+            console.log('[Available artifacts from API]', artifactNames);
+
+            // Merge SSE-detected artifact names with API-listed ones
+            const mergedNames = [...new Set([...artifactNames, ...sseArtifactNames])];
+            console.log('[Merged artifact names]', mergedNames);
 
             // Only process artifacts we haven't shown yet (prevents duplicates across messages)
-            const newArtifactNames = artifactNames.filter(
+            const newArtifactNames = mergedNames.filter(
               (name: string) => !shownArtifactsRef.current.has(name)
             );
 

@@ -73,16 +73,17 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
     img: ({ src, alt }) => (
       <MarkdownImage src={typeof src === 'string' ? src : ''} alt={alt || 'Image'} />
     ),
-    // Unwrap <p> when it only contains a block-level image (figure/div are invalid inside <p>)
+    // Unwrap <p> when it contains an image — <figure>/<div> are invalid inside <p>
+    // NOTE: react-markdown passes the custom img renderer (an arrow fn) as the child type,
+    // not MarkdownImage itself, so we detect images by checking for a `src` prop instead.
     p: ({ children }) => {
-      const childArray = Array.isArray(children) ? children : [children];
-      const hasOnlyImage = childArray.every(
+      const childArray = React.Children.toArray(children);
+      const containsImage = childArray.some(
         (child) =>
-          child == null ||
-          child === '' ||
-          (typeof child === 'object' && (child as React.ReactElement)?.type === MarkdownImage)
+          React.isValidElement(child) &&
+          (child.props as Record<string, unknown>)?.src != null
       );
-      if (hasOnlyImage) return <>{children}</>;
+      if (containsImage) return <>{children}</>;
       return <p>{children}</p>;
     },
   };

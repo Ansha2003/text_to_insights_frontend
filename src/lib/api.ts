@@ -171,73 +171,71 @@ export async function getArtifact(
   artifactName: string
 ): Promise<ArtifactData | null> {
   try {
-    const response = await fetch(
-      `${API_BASE}/apps/${appName}/users/${userId}/sessions/${sessionId}/artifacts/${encodeURIComponent(artifactName)}`
-    );
+    const url = `${API_BASE}/apps/${appName}/users/${userId}/sessions/${sessionId}/artifacts/${encodeURIComponent(artifactName)}`;
+    console.log('[getArtifact] Fetching:', url);
+    const response = await fetch(url);
     
     if (!response.ok) {
-      console.warn('Failed to get artifact:', artifactName, response.status);
+      console.warn('[getArtifact] Failed:', artifactName, response.status, response.statusText);
       return null;
     }
     
-    // The ADK returns the artifact data - need to check the format
     const contentType = response.headers.get('content-type') || '';
+    console.log('[getArtifact] Content-Type:', contentType);
     
-    if (contentType.includes('application/json')) {
-      // JSON response with inlineData or inline_data
-      const data = await response.json();
-      console.log('[Artifact JSON response]', Object.keys(data));
-      
-      // Handle camelCase (inlineData) - ADK's actual format
-      if (data.inlineData?.data) {
-        return {
-          filename: artifactName,
-          mimeType: data.inlineData.mimeType || data.inlineData.mime_type || 'image/png',
-          data: fixPadding(cleanBase64(data.inlineData.data)),
-        };
-      }
-      // Handle snake_case (inline_data) - fallback
-      if (data.inline_data?.data) {
-        return {
-          filename: artifactName,
-          mimeType: data.inline_data.mime_type || data.inline_data.mimeType || 'image/png',
-          data: fixPadding(cleanBase64(data.inline_data.data)),
-        };
-      }
-      // Direct JSON with data field
-      if (data.data) {
-        return {
-          filename: artifactName,
-          mimeType: data.mime_type || data.mimeType || 'image/png',
-          data: fixPadding(cleanBase64(data.data)),
-        };
-      }
-      console.warn('[Artifact format unknown]', data);
-      return null;
-    } else if (contentType.includes('image/')) {
+    if (contentType.includes('image/')) {
       // Binary image response - convert to base64
       const blob = await response.blob();
       const base64 = await blobToBase64(blob);
       return {
         filename: artifactName,
-        mimeType: contentType,
+        mimeType: contentType.split(';')[0].trim(),
         data: base64,
       };
-    } else {
-      // Try to read as text/base64
-      const text = await response.text();
-      // Check if it's already base64
-      if (text.match(/^[A-Za-z0-9+/]+=*$/)) {
+    }
+
+    // Try JSON parsing (handles application/json and unknown content types)
+    const text = await response.text();
+    let data: Record<string, unknown> | null = null;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      // Not JSON - check if it's raw base64
+      if (text.match(/^[A-Za-z0-9+/\-_\s]+=*$/)) {
         return {
           filename: artifactName,
           mimeType: 'image/png',
-          data: text,
+          data: fixPadding(cleanBase64(text)),
         };
       }
+      console.warn('[getArtifact] Response is not JSON or base64, length:', text.length);
       return null;
     }
+
+    if (!data) return null;
+    console.log('[getArtifact] JSON keys:', Object.keys(data));
+
+    // Handle camelCase (inlineData) - ADK's default with by_alias=True
+    const inlineData = (data.inlineData ?? data.inline_data) as Record<string, unknown> | undefined;
+    if (inlineData?.data) {
+      return {
+        filename: artifactName,
+        mimeType: ((inlineData.mimeType ?? inlineData.mime_type) as string) || 'image/png',
+        data: fixPadding(cleanBase64(inlineData.data as string)),
+      };
+    }
+    // Direct JSON with data field
+    if (data.data && typeof data.data === 'string') {
+      return {
+        filename: artifactName,
+        mimeType: ((data.mimeType ?? data.mime_type) as string) || 'image/png',
+        data: fixPadding(cleanBase64(data.data)),
+      };
+    }
+    console.warn('[getArtifact] Unrecognised JSON structure:', JSON.stringify(data).slice(0, 300));
+    return null;
   } catch (error) {
-    console.error('Error fetching artifact:', error);
+    console.error('[getArtifact] Error:', error);
     return null;
   }
 }
