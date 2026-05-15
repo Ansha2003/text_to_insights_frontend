@@ -5,7 +5,7 @@ import { DashboardGrid } from '@/components/dashboard';
 
 export default function SalesDashboard() {
   return (
-    <AppLayout activePath="/dashboard/sales">
+    <AppLayout>
       <div className="dash-page">
         <DashboardGrid />
       </div>

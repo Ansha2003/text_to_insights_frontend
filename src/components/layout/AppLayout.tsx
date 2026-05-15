@@ -31,7 +31,6 @@ interface AppLayoutProps {
   questions?: QuestionItem[];
   onQuestionClick?: (question: QuestionItem) => void;
   onNewChat?: () => void;
-  activePath?: string;
 }
 
 export function AppLayout({
@@ -39,7 +38,6 @@ export function AppLayout({
   questions = [],
   onQuestionClick,
   onNewChat,
-  activePath,
 }: AppLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isDetailPaneOpen, setIsDetailPaneOpen] = useState(false);
@@ -94,7 +92,6 @@ export function AppLayout({
             questions={questions}
             onQuestionClick={onQuestionClick}
             onNewChat={onNewChat}
-            activePath={activePath}
           />
 
           {/* Main Chat Area */}

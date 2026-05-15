@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import type { QuestionItem } from '@/types';
 
 interface SidebarProps {
@@ -8,7 +10,6 @@ interface SidebarProps {
   questions: QuestionItem[];
   onQuestionClick?: (question: QuestionItem) => void;
   onNewChat?: () => void;
-  activePath?: string;
 }
 
 const NAV_ITEMS = [
@@ -21,8 +22,8 @@ export function Sidebar({
   questions,
   onQuestionClick,
   onNewChat,
-  activePath = '/',
 }: SidebarProps) {
+  const pathname = usePathname();
   // Group questions by date
   const groupedQuestions = useMemo(() => {
     const groups: Record<string, QuestionItem[]> = {};
@@ -80,16 +81,14 @@ export function Sidebar({
       {/* Navigation Links */}
       <nav className="sidebar__nav" aria-label="Main navigation">
         {NAV_ITEMS.map((item) => (
-          <a
+          <Link
             key={item.href}
             href={item.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`sidebar__nav-item ${activePath === item.href ? 'sidebar__nav-item--active' : ''}`}
+            className={`sidebar__nav-item ${pathname === item.href ? 'sidebar__nav-item--active' : ''}`}
           >
             {item.icon === 'chat' ? <ChatIcon /> : <ChartIcon />}
             <span>{item.label}</span>
-          </a>
+          </Link>
         ))}
       </nav>
 
